@@ -69,6 +69,19 @@ def parse_args(argv=None):
 
 def read_contacts(input_csv, email_column):
     with input_csv.open(newline="", encoding="utf-8-sig") as f:
+        probe = csv.reader(f)
+        first_row = next(probe, None)
+        f.seek(0)
+
+        # Headerless single-column file (just a list of addresses, no "email"
+        # row) - detected the same way email_frequency_counter does: one
+        # column, and its first cell is already a valid address rather than
+        # a header label.
+        if first_row and len(first_row) == 1 and EMAIL_RE.match(first_row[0].strip()):
+            reader = csv.reader(f)
+            rows = [{email_column: row[0].strip()} for row in reader if row and row[0].strip()]
+            return rows, [email_column]
+
         reader = csv.DictReader(f)
         if reader.fieldnames is None:
             raise ValueError(f"{input_csv} appears to be empty (no header row)")

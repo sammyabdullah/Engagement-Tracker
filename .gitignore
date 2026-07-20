@@ -16,3 +16,6 @@ token.json
 *.sqlite-wal
 *.sqlite-shm
 *_scored.csv
+
+# Your real contact list - never commit
+contacts.csv
