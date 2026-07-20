@@ -8,6 +8,7 @@ thereafter, then compute every contact's stats from the local cache.
 
 import datetime
 import sys
+import time
 from email.utils import getaddresses
 
 from tqdm import tqdm
@@ -18,6 +19,7 @@ from .config import (
     BATCH_SIZE,
     INCREMENTAL_OVERLAP_DAYS,
     LIST_PAGE_SIZE,
+    MAX_REQUESTS_PER_SECOND,
     METADATA_HEADERS,
     SYNC_LOOKBACK_DAYS,
 )
@@ -123,6 +125,7 @@ def fetch_and_store_messages(conn, service, mailbox, message_ids, direction):
     stored = 0
     chunks = [message_ids[i:i + BATCH_SIZE] for i in range(0, len(message_ids), BATCH_SIZE)]
     for chunk in tqdm(chunks, desc=f"  {mailbox} {direction}", unit="batch", disable=len(chunks) == 0):
+        batch_start = time.monotonic()
         responses = execute_batch_with_retry(service, build_request, chunk)
         for message_id, message in responses.items():
             headers = message.get("payload", {}).get("headers", [])
@@ -148,6 +151,13 @@ def fetch_and_store_messages(conn, service, mailbox, message_ids, direction):
                 )
             stored += 1
         conn.commit()
+
+        # Pace requests to stay under Gmail's per-mailbox rate limit instead
+        # of bursting and relying on retry-after-the-fact backoff.
+        min_interval = len(chunk) / MAX_REQUESTS_PER_SECOND
+        elapsed = time.monotonic() - batch_start
+        if elapsed < min_interval:
+            time.sleep(min_interval - elapsed)
     return stored
 
 

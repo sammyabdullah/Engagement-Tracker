@@ -41,7 +41,15 @@ METADATA_HEADERS = [
 ]
 
 LIST_PAGE_SIZE = 500
-BATCH_SIZE = 100  # Gmail API batch request cap
+
+# Gmail's per-mailbox rate limit is ~250 quota units/sec, and messages.get
+# costs 5 units - a ceiling of ~50 get calls/sec/mailbox. A 100-request
+# batch (the API's raw cap) blows straight through that in one shot, so
+# nearly every batch was coming back with a chunk of 403s to retry. Sizing
+# batches under the ceiling, paced by MAX_REQUESTS_PER_SECOND below, avoids
+# that retry storm instead of just backing off after the fact.
+BATCH_SIZE = 40
+MAX_REQUESTS_PER_SECOND = 45
 MAX_RETRIES = 5
 
 # Day-granularity overlap applied to incremental syncs. Gmail's after:
