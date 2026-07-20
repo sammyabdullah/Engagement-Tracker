@@ -14,7 +14,13 @@ from tqdm import tqdm
 
 from . import cache
 from .backoff import call_with_backoff, execute_batch_with_retry
-from .config import BATCH_SIZE, INCREMENTAL_OVERLAP_DAYS, LIST_PAGE_SIZE, METADATA_HEADERS
+from .config import (
+    BATCH_SIZE,
+    INCREMENTAL_OVERLAP_DAYS,
+    LIST_PAGE_SIZE,
+    METADATA_HEADERS,
+    SYNC_LOOKBACK_DAYS,
+)
 
 SENT_QUERY_BASE = "in:sent"
 RECEIVED_QUERY_BASE = "-in:sent -in:chats -in:draft -in:spam -in:trash"
@@ -154,6 +160,15 @@ def sync_direction(conn, service, mailbox, direction, base_query, progress_label
             cutoff_ms / 1000, tz=datetime.timezone.utc
         ).strftime("%Y/%m/%d")
         query = f"{base_query} after:{cutoff_date}"
+    elif SYNC_LOOKBACK_DAYS is not None:
+        # First-ever sync for this mailbox/direction: bound it instead of
+        # pulling the mailbox's entire lifetime history. Only applies once -
+        # every sync after this is incremental regardless of this setting.
+        lookback_date = (
+            datetime.datetime.now(datetime.timezone.utc)
+            - datetime.timedelta(days=SYNC_LOOKBACK_DAYS)
+        ).strftime("%Y/%m/%d")
+        query = f"{base_query} after:{lookback_date}"
 
     print(f"  [{mailbox}] listing {progress_label} ({'incremental' if last_synced else 'full'})...")
     all_ids = list_message_ids(service, query)

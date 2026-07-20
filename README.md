@@ -118,9 +118,14 @@ or without installing the package:
 python -m engagement_tracker.cli contacts.csv
 ```
 
-First run does a full sync of all 5 mailboxes' entire sent/received
-history — this can take a while depending on mailbox size. Every run after
-that is incremental and much faster.
+First run syncs each mailbox's sent/received history going back
+`SYNC_LOOKBACK_DAYS` (default 730 days / ~2 years, set in `config.py`) —
+this can still take a while on large mailboxes, since Gmail's API costs one
+metadata fetch per message regardless of batching. Set it to `None` for
+unbounded full-lifetime history if you want it, but expect a much longer
+first run on a large mailbox. Every run after the first is incremental
+(only new messages since last sync) and much faster, regardless of this
+setting.
 
 ### Options
 

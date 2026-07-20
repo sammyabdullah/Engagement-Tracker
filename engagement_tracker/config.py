@@ -45,3 +45,10 @@ MAX_RETRIES = 5
 # re-sync re-requests this many days before the last sync's newest message
 # to avoid gaps; duplicates are harmless (de-duped on insert by primary key).
 INCREMENTAL_OVERLAP_DAYS = 1
+
+# How far back the *first-ever* sync of a mailbox reaches, in days. Applies
+# once per mailbox/direction - every sync after that is incremental
+# regardless of this value. None means no bound (full lifetime history).
+# 730 days (~2 years) balances useful history against first-sync runtime on
+# large mailboxes.
+SYNC_LOOKBACK_DAYS = 730
