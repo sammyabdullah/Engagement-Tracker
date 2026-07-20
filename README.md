@@ -91,11 +91,17 @@ You need Google Workspace super admin access for this step.
 2. Click **Add new**, paste the service account's **Client ID**, and under
    **OAuth scopes** add:
    ```
-   https://www.googleapis.com/auth/gmail.metadata
+   https://www.googleapis.com/auth/gmail.readonly
    ```
+   (Not `gmail.metadata` — that scope looks narrower, but Gmail's API
+   rejects the search query parameter entirely under it, which this tool
+   depends on to enumerate sent/received mail. `gmail.readonly` is the
+   narrowest scope that actually supports search.)
 3. Save. This authorizes the service account to impersonate **any** mailbox
-   on your domain with this narrow, read-headers-only scope — it cannot
-   read message bodies, send mail, or modify anything.
+   on your domain with this scope. It cannot send mail or modify anything.
+   The code itself never requests message bodies or attachments — only
+   headers, dates, and thread ids — even though the grant technically
+   permits reading them.
 
 No further per-mailbox setup is needed — the service account can
 impersonate all 5 configured mailboxes immediately once this is saved.
@@ -186,9 +192,12 @@ review.
 ## Notes
 
 - No LLM/AI API calls at runtime — pure Gmail API metadata + local logic.
-- The Gmail scope used (`gmail.metadata`) cannot read message bodies,
-  attachments, send mail, or modify anything — only headers, dates, and
-  thread/label structure.
+- The Gmail scope used (`gmail.readonly`) permits reading message bodies,
+  but the code never requests them — every call uses `format="metadata"`
+  with an explicit header allowlist, so only headers, dates, and thread ids
+  are ever fetched or stored, never message content. (`gmail.metadata`
+  would be a tighter grant, but Gmail's API rejects search entirely under
+  that scope, which this tool needs to enumerate sent/received mail.)
 - Handles Gmail API pagination (`nextPageToken`) and rate limits
   (exponential backoff with jitter on 403/429/500/503) for both single and
   batch requests.

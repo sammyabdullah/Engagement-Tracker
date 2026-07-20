@@ -14,10 +14,14 @@ MAILBOXES = [
     "cofounder@blossomstreetventures.com",
 ]
 
-# gmail.metadata is the narrowest scope that still exposes headers,
-# internalDate, and threadId via format="metadata" - no message bodies or
-# attachments, which this tool never needs (no LLM/content analysis).
-SCOPES = ["https://www.googleapis.com/auth/gmail.metadata"]
+# gmail.metadata looks like the narrowest fit (headers/internalDate/threadId
+# only, via format="metadata") but Gmail's API rejects the `q` search
+# parameter under that scope entirely - and this tool relies on `q` (in:sent,
+# after:, etc.) to enumerate messages. gmail.readonly is the narrowest scope
+# that actually supports search. The code still never requests message
+# bodies or attachments (always format="metadata"/metadataHeaders) even
+# though the grant itself is broader than strictly needed.
+SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
 DEFAULT_SERVICE_ACCOUNT_KEY = "service_account.json"
 DEFAULT_DB_PATH = "engagement_tracker_cache.sqlite"
