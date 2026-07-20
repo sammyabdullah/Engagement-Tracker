@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+build/
+dist/
+
+# Secrets - never commit
+service_account.json
+*-service-account*.json
+credentials.json
+token.json
+
+# Local cache and run outputs
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*_scored.csv
