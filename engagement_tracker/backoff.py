@@ -62,7 +62,22 @@ def execute_batch_with_retry(service, build_request, request_ids, max_retries=MA
         batch = service.new_batch_http_request(callback=make_callback())
         for request_id in pending:
             batch.add(build_request(request_id), request_id=request_id)
-        batch.execute()
+
+        try:
+            batch.execute()
+        except Exception as e:
+            # The whole batch HTTP call failed (network blip, DNS hiccup, a
+            # 5xx from the /batch endpoint itself) rather than a per-item
+            # failure inside it - none of `pending` reached the callback,
+            # so retry the entire chunk rather than losing it.
+            status = getattr(getattr(e, "resp", None), "status", None)
+            print(
+                f"  Batch request failed ({status or type(e).__name__}: {e}); "
+                f"will retry the whole batch.",
+                file=sys.stderr,
+            )
+            retry_next = list(pending)
+            errors = {}
 
         for request_id, exception in errors.items():
             print(f"  Error fetching message {request_id}: {exception}", file=sys.stderr)
